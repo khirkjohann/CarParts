@@ -30,7 +30,7 @@ def F1_score(y_true, y_pred):
 @st.cache_resource
 def load_detection_model():
     try:
-        model_path = 'models/car_parts_model.keras'
+        model_path = '/mount/src/carparts/models/car_parts_model.keras'
         if not os.path.exists('models'):
             os.makedirs('models')
             
