@@ -40,7 +40,7 @@ def load_detection_model():
                 model_url = "https://drive.google.com/file/d/1u1kzAKwzG6DUH5-4YAbsgqpjZKHEWgjr/view?usp=sharing"
                 gdown.download(model_url, model_path, quiet=False)
         
-        return tf.keras.models.load_model(model_path, custom_objects={'F1_score': F1_score})
+        return tf.keras.models.load_model('car_parts_model.keras', custom_objects={'F1_score': F1_score})
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None
