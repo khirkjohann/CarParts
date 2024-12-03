@@ -37,7 +37,7 @@ def load_detection_model():
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... This might take a while...'):
                 # Get the model URL from Streamlit secrets
-                model_url = st.secrets["GOOGLE_DRIVE"]["GOOGLE_DRIVE_MODEL_URL"]
+                model_url = "https://drive.google.com/file/d/1u1kzAKwzG6DUH5-4YAbsgqpjZKHEWgjr/view?usp=sharing"
                 gdown.download(model_url, model_path, quiet=False)
         
         return tf.keras.models.load_model(model_path, custom_objects={'F1_score': F1_score})
