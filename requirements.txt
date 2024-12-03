@@ -1,6 +1,5 @@
-gdown
 tensorflow==2.15.0
-opencv-python
-streamlit
-numpy
-Pillow
+Pillow==10.2.0
+opencv-python==4.9.0.80
+numpy==1.24.3
+gdown==5.1.0
