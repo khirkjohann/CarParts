@@ -38,16 +38,21 @@ def load_detection_model():
         model_path = 'models/potatoes.h5'
         if not os.path.exists('models'):
             os.makedirs('models')
-            
+
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... This might take a while...'):
-                model_url = "https://drive.google.com/file/d/1XuvYZIPSs2LvzohWrza1bWaOMSxu23lr/view?usp=sharing"
-                gdown.download(model_url, model_path, quiet=False)
-        
+                model_url = "https://drive.google.com/uc?id=1XuvYZIPSs2LvzohWrza1bWaOMSxu23lr"
+                gdown.download(model_url, output=model_path, quiet=True)
+
+        # Check if the file is downloaded correctly
+        if not os.path.exists(model_path):
+            raise FileNotFoundError("Model file not downloaded successfully.")
+
         return tf.keras.models.load_model(model_path)
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None
+
 
 # Disease classes with descriptions
 class_names = ['Potato___Early_blight', 'Potato___Late_blight', 'Potato___healthy']
