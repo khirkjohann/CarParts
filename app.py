@@ -35,7 +35,7 @@ st.markdown("""
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     try:
-        model_path = 'models/potato_disease_model.keras'
+        model_path = 'models/potatoes.h5'
         if not os.path.exists('models'):
             os.makedirs('models')
             
