@@ -31,7 +31,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
+# Model loading with progress tracking
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     try:
@@ -58,7 +58,7 @@ class_info = {
     'Potato___healthy': 'Normal, healthy potato leaves showing no signs of disease.'
 }
 
-def predict_image(img_array):
+def predict_image(model, img_array):
     """Predict disease class for preprocessed image array"""
     prediction = model.predict(img_array, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
@@ -114,7 +114,7 @@ def main():
                 
                 if processed_img is not None:
                     with st.spinner("Analyzing leaf..."):
-                        class_name, confidence, all_predictions = predict_image(processed_img)
+                        class_name, confidence, all_predictions = predict_image(model, processed_img)
                     
                     # Display prediction results
                     st.subheader("Detection Results")
