@@ -31,7 +31,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Model loading with progress tracking
+
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     try:
@@ -40,16 +40,9 @@ def load_detection_model():
             os.makedirs('models')
             
         if not os.path.exists(model_path):
-            progress_text = "Downloading model..."
-            progress_bar = st.progress(0)
-            
-            def download_progress(current, total):
-                progress = float(current) / float(total)
-                progress_bar.progress(progress)
-                
-            model_url = "https://drive.google.com/uc?id=1NF8DeUe4gy_x6NtZh12-IwD4q8n0RDjI"
-            gdown.download(model_url, model_path, quiet=False, callback=download_progress)
-            progress_bar.empty()
+            with st.spinner('Downloading model... This might take a while...'):
+                model_url = "https://drive.google.com/uc?id=1NF8DeUe4gy_x6NtZh12-IwD4q8n0RDjI"
+                gdown.download(model_url, model_path, quiet=False)
         
         return tf.keras.models.load_model(model_path)
     except Exception as e:
