@@ -70,7 +70,7 @@ def predict(model, img):
 
 # Main app
 def main():
-    st.title("\ud83d\ude97 Car Parts Classification")
+    st.title("Car Parts Classification")
     st.subheader("Upload an image or use the live feed to classify car parts")
 
     model = load_model()
