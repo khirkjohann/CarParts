@@ -112,7 +112,7 @@ def main():
 
         if st.button("Start Live Feed"):
             # Replace <your-phone-ip> with your actual IP address
-            stream_url = "http://192.168.254.105:8080/video"  # IP address from the IP Webcam app
+            stream_url = "http://192.168.1.13:8080/video"  # IP address from the IP Webcam app
             cap = cv2.VideoCapture(stream_url)
             if not cap.isOpened():
                 st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
