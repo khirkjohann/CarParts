@@ -69,7 +69,7 @@ def predict(model, img):
 # Main app
 def main():
     st.title("Car Parts Classification")
-    st.subheader("Upload an image or use the live feed to classify car parts")
+    st.subheader("Upload an image or use the webcam to classify car parts")
 
     model = load_model()
 
@@ -78,7 +78,7 @@ def main():
         return
 
     # Sidebar options
-    option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Live Feed"])
+    option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Webcam"])
 
     if option == "Upload Image":
         uploaded_file = st.file_uploader("Upload a car part image", type=["jpg", "jpeg", "png"])
@@ -107,20 +107,20 @@ def main():
             st.markdown("### Part Description")
             st.markdown(class_info.get(class_name, "No description available."))
 
-    elif option == "Live Feed":
-        st.write("Click the button below to start the live feed.")
+    elif option == "Webcam":
+        st.write("Click the button below to start the webcam.")
 
-        if st.button("Start Live Feed"):
-            # Replace <your-phone-ip> with your actual IP address
-            stream_url = "http://192.168.1.13:8080/video"  # IP address from the IP Webcam app
-            cap = cv2.VideoCapture(stream_url)
+        if st.button("Start Webcam"):
+            cap = cv2.VideoCapture(0)  # Use default webcam (0)
             if not cap.isOpened():
-                st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
+                st.error("Failed to access the webcam. Please check your camera connection.")
                 return
 
             stframe = st.empty()
+            stop_button = st.button("Stop Webcam")
+            
             try:
-                while True:
+                while not stop_button:
                     ret, frame = cap.read()
                     if not ret:
                         st.warning("Failed to capture frame. Please check your camera connection.")
@@ -130,11 +130,15 @@ def main():
                     class_name, confidence, _ = predict(model, processed_frame)
 
                     # Display the predicted class and confidence on the live feed
-                    cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
 
+                    if stop_button:
+                        break
+
             except Exception as e:
-                st.error(f"Error during live feed: {str(e)}")
+                st.error(f"Error during webcam feed: {str(e)}")
             finally:
                 cap.release()
 
