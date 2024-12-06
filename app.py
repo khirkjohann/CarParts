@@ -1,7 +1,6 @@
 import streamlit as st
 import tensorflow as tf
 from PIL import Image
-import cv2
 import numpy as np
 import gdown
 import os
@@ -54,7 +53,8 @@ class_info = {
 
 # Image preprocessing
 def preprocess_image(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.convert("RGB")  # Convert to RGB if it's not already
+    img = np.array(img)
     img = tf.image.resize(img, [224, 224])
     img = img / 255.0
     return np.expand_dims(img, axis=0)
@@ -87,8 +87,7 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Image", use_column_width=True)
 
-            img_array = np.array(image)
-            processed_img = preprocess_image(img_array)
+            processed_img = preprocess_image(image)
 
             with st.spinner("Analyzing image..."):
                 class_name, confidence, all_predictions = predict(model, processed_img)
@@ -115,31 +114,38 @@ def main():
     elif option == "Live Feed":
         st.write("Click the button below to start the live feed.")
 
-        if st.button("Start Live Feed"):
-            stream_url = "http://192.168.254.105:8080/video"
-            cap = cv2.VideoCapture(stream_url)
-            if not cap.isOpened():
-                st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
-                return
+        # Use st.camera_input to access the device's camera
+        camera_input = st.camera_input("Take a picture")
 
-            stframe = st.empty()
-            try:
-                while True:
-                    ret, frame = cap.read()
-                    if not ret:
-                        st.warning("Failed to capture frame. Please check your camera connection.")
-                        break
+        if camera_input is not None:
+            # Open the captured image
+            image = Image.open(camera_input)
+            st.image(image, caption="Captured Image", use_column_width=True)
 
-                    processed_frame = preprocess_image(frame)
-                    class_name, confidence, _ = predict(model, processed_frame)
+            # Preprocess the image and get predictions
+            processed_img = preprocess_image(image)
 
-                    cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
+            with st.spinner("Analyzing image..."):
+                class_name, confidence, all_predictions = predict(model, processed_img)
 
-            except Exception as e:
-                st.error(f"Error during live feed: {str(e)}")
-            finally:
-                cap.release()
+            st.subheader("Prediction Results")
+            st.markdown(f"**Predicted Class:** {class_name}")
+            st.markdown(f"**Confidence:** {confidence:.1%}")
+
+            # Sort and filter predictions
+            predictions_with_names = list(zip(class_names, all_predictions))
+            sorted_predictions = sorted(predictions_with_names, key=lambda x: x[1], reverse=True)
+            non_zero_predictions = [(name, prob) for name, prob in sorted_predictions if prob > 0]
+
+            # Display detailed probabilities
+            st.markdown("### Class Probabilities")
+            for name, prob in non_zero_predictions:
+                st.progress(float(prob))
+                st.caption(f"{name}: {prob:.1%}")
+
+            # Description
+            st.markdown("### Part Description")
+            st.markdown(class_info.get(class_name, "No description available."))
 
 if __name__ == "__main__":
     main()
