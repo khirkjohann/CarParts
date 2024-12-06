@@ -7,7 +7,8 @@ import os
 
 # Page configuration
 st.set_page_config(
-    page_title="Car Parts Classification",
+    page_title="Potato Disease Detection",
+    page_icon="🥔",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -31,26 +32,13 @@ def load_model():
         return None
 
 # Class names and descriptions (update as per your dataset)
-class_names = [
-    'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
-    'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
-    'CRANKSHAFT', 'CYLINDER HEAD', 'DISTRIBUTOR', 'ENGINE BLOCK', 'ENGINE VALVE',
-    'FUEL INJECTOR', 'FUSE BOX', 'GAS CAP', 'HEADLIGHTS', 'IDLER ARM',
-    'IGNITION COIL', 'INSTRUMENT CLUSTER', 'LEAF SPRING', 'LOWER CONTROL ARM',
-    'MUFFLER', 'OIL FILTER', 'OIL PAN', 'OIL PRESSURE SENSOR', 'OVERFLOW TANK',
-    'OXYGEN SENSOR', 'PISTON', 'PRESSURE PLATE', 'RADIATOR', 'RADIATOR FAN',
-    'RADIATOR HOSE', 'RADIO', 'RIM', 'SHIFT KNOB', 'SIDE MIRROR', 'SPARK PLUG',
-    'SPOILER', 'STARTER', 'TAILLIGHTS', 'THERMOSTAT', 'TORQUE CONVERTER',
-    'TRANSMISSION', 'VACUUM BRAKE BOOSTER', 'VALVE LIFTER', 'WATER PUMP',
-    'WINDOW REGULATOR'
-]
+class_names = ['Potato___Early_blight', 'Potato___Late_blight', 'Potato___healthy']
 
 class_info = {
-    'Ignition Coil': 'Description of Ignition Coil.',
-    'Leaf Spring': 'Description of Leaf Spring.',
-    # Add descriptions for all classes
+    'Potato___Early_blight': 'A fungal disease that causes dark spots with concentric rings on potato leaves, typically affecting older leaves first.',
+    'Potato___Late_blight': 'A devastating water mold infection causing dark, water-soaked spots on leaves that can quickly destroy entire plants.',
+    'Potato___healthy': 'Normal, healthy potato leaves showing no signs of disease.'
 }
-
 # Image preprocessing
 def preprocess_image(img):
     img = img.convert("RGB")  # Convert to RGB if it's not already
@@ -144,7 +132,7 @@ def main():
                 st.caption(f"{name}: {prob:.1%}")
 
             # Description
-            st.markdown("### Part Description")
+            st.markdown("### Description")
             st.markdown(class_info.get(class_name, "No description available."))
 
 if __name__ == "__main__":
