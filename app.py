@@ -10,7 +10,6 @@ import time
 # Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
-    page_icon="\ud83d\ude97",
     layout="wide",
     initial_sidebar_state="expanded"
 )
