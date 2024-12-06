@@ -6,32 +6,27 @@ import numpy as np
 import gdown
 import os
 
-# Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Model loading
 @st.cache_resource(show_spinner=False)
 def load_model():
     try:
         model_path = 'models/best_model.keras'
         if not os.path.exists('models'):
             os.makedirs('models')
-
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... Please wait.'):
                 model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"
                 gdown.download(model_url, output=model_path, quiet=True)
-
         return tf.keras.models.load_model(model_path)
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None
 
-# Class names and descriptions (update as per your dataset)
 class_names = [
     'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
     'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
@@ -49,40 +44,40 @@ class_names = [
 class_info = {
     'Ignition Coil': 'Description of Ignition Coil.',
     'Leaf Spring': 'Description of Leaf Spring.',
-    # Add descriptions for all classes
 }
 
-# Image preprocessing
 def preprocess_image(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = tf.image.resize(img, [224, 224])
     img = img / 255.0
     return np.expand_dims(img, axis=0)
 
-# Prediction function
 def predict(model, img):
     prediction = model.predict(img, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
     confidence = prediction[0][predicted_class_idx]
     return class_names[predicted_class_idx], confidence, prediction[0]
 
-# Main app
+def get_webcam():
+    for idx in range(4):
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            return cap
+    return None
+
 def main():
     st.title("Car Parts Classification")
     st.subheader("Upload an image or use the webcam to classify car parts")
 
     model = load_model()
-
     if model is None:
         st.error("Failed to load model. Please refresh the page.")
         return
 
-    # Sidebar options
     option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Webcam"])
 
     if option == "Upload Image":
         uploaded_file = st.file_uploader("Upload a car part image", type=["jpg", "jpeg", "png"])
-
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Image", use_column_width=True)
@@ -97,22 +92,16 @@ def main():
             st.markdown(f"**Predicted Class:** {class_name}")
             st.markdown(f"**Confidence:** {confidence:.1%}")
 
-            # Display detailed probabilities
             st.markdown("### Class Probabilities")
             for i, name in enumerate(class_names):
                 st.progress(float(all_predictions[i]))
                 st.caption(f"{name}: {all_predictions[i]:.1%}")
 
-            # Description
             st.markdown("### Part Description")
             st.markdown(class_info.get(class_name, "No description available."))
 
-    elif option == "Webcam":
+    else:
         st.write("Click the button below to start the webcam.")
-
-        elif option == "Webcam":
-        st.write("Click the button below to start the webcam.")
-
         if st.button("Start Webcam"):
             cap = get_webcam()
             if cap is None:
@@ -141,6 +130,5 @@ def main():
             finally:
                 cap.release()
 
-# Run app
 if __name__ == "__main__":
     main()
