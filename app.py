@@ -19,13 +19,13 @@ st.set_page_config(
 @st.cache_resource(show_spinner=False)
 def load_model():
     try:
-        model_path = 'models/car_parts_model.h5'
+        model_path = 'models/best_model.keras'
         if not os.path.exists('models'):
             os.makedirs('models')
 
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... Please wait.'):
-                model_url = "https://drive.google.com/uc?id=your-model-id"
+                model_url = "https://drive.google.com/file/d/1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"
                 gdown.download(model_url, output=model_path, quiet=True)
 
         return tf.keras.models.load_model(model_path)
