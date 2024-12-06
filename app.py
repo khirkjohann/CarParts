@@ -112,7 +112,7 @@ def main():
         st.write("Click the button below to start the live feed.")
 
         if st.button("Start Live Feed"):
-            cap = cv2.VideoCapture(0)
+            cap = cv2.VideoCapture(1)
             if not cap.isOpened():
                 st.error("Failed to access the camera.")
                 return
