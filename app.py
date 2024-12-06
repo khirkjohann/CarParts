@@ -5,28 +5,33 @@ import cv2
 import numpy as np
 import gdown
 import os
-import base64
-from io import BytesIO
-from streamlit.components.v1 import html
-import json
 
-st.set_page_config(page_title="Car Parts Classification", layout="wide")
+# Page configuration
+st.set_page_config(
+    page_title="Car Parts Classification",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# Model loading
 @st.cache_resource(show_spinner=False)
 def load_model():
     try:
         model_path = 'models/best_model.keras'
         if not os.path.exists('models'):
             os.makedirs('models')
+
         if not os.path.exists(model_path):
-            with st.spinner('Downloading model...'):
+            with st.spinner('Downloading model... Please wait.'):
                 model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"
                 gdown.download(model_url, output=model_path, quiet=True)
+
         return tf.keras.models.load_model(model_path)
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None
 
+# Class names and descriptions (update as per your dataset)
 class_names = [
     'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
     'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
@@ -41,181 +46,98 @@ class_names = [
     'WINDOW REGULATOR'
 ]
 
+class_info = {
+    'Ignition Coil': 'Description of Ignition Coil.',
+    'Leaf Spring': 'Description of Leaf Spring.',
+    # Add descriptions for all classes
+}
+
+# Image preprocessing
 def preprocess_image(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = tf.image.resize(img, [224, 224])
     img = img / 255.0
     return np.expand_dims(img, axis=0)
 
+# Prediction function
 def predict(model, img):
     prediction = model.predict(img, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
     confidence = prediction[0][predicted_class_idx]
     return class_names[predicted_class_idx], confidence, prediction[0]
 
-def get_webcam_html():
-    return """
-        <div>
-            <video id="video" width="640" height="480" autoplay style="border: 1px solid gray;"></video>
-            <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
-        </div>
-        <script>
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
-            let streaming = true;
-
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'environment',
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                } 
-            })
-            .then(function(stream) {
-                video.srcObject = stream;
-                video.play();
-            })
-            .catch(function(err) {
-                console.error("Error accessing webcam:", err);
-            });
-
-            function captureFrame() {
-                if (!streaming) return;
-                
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                
-                window.parent.postMessage({
-                    type: 'webcam-frame',
-                    data: imageData
-                }, '*');
-            }
-
-            // Capture frame every 200ms
-            setInterval(captureFrame, 200);
-
-            // Clean up
-            window.addEventListener('beforeunload', function() {
-                streaming = false;
-                if (video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                }
-            });
-        </script>
-    """
-
-def get_webcam_html():
-    return """
-        <div style="max-width: 414px; margin: 0 auto;">
-            <video id="video" width="414" height="736" autoplay style="border: 1px solid gray; border-radius: 20px;"></video>
-            <canvas id="canvas" width="414" height="736" style="display: none;"></canvas>
-            <button id="capture" style="
-                width: 70px;
-                height: 70px;
-                border-radius: 35px;
-                background-color: white;
-                border: 3px solid gray;
-                position: relative;
-                margin: 20px auto;
-                display: block;
-                cursor: pointer;">
-            </button>
-        </div>
-        <script>
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const captureButton = document.getElementById('capture');
-            const context = canvas.getContext('2d');
-            let streaming = true;
-
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'environment',
-                    width: { ideal: 414 },
-                    height: { ideal: 736 }
-                } 
-            })
-            .then(function(stream) {
-                video.srcObject = stream;
-                video.play();
-            })
-            .catch(function(err) {
-                console.error("Error accessing webcam:", err);
-            });
-
-            captureButton.addEventListener('click', function() {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                window.parent.postMessage({
-                    type: 'webcam-capture',
-                    data: imageData
-                }, '*');
-            });
-
-            // Clean up
-            window.addEventListener('beforeunload', function() {
-                streaming = false;
-                if (video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                }
-            });
-        </script>
-    """
-
+# Main app
 def main():
     st.title("Car Parts Classification")
-    
+    st.subheader("Upload an image or use the live feed to classify car parts")
+
     model = load_model()
+
     if model is None:
         st.error("Failed to load model. Please refresh the page.")
         return
 
-    option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Live Webcam"])
+    # Sidebar options
+    option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Live Feed"])
 
     if option == "Upload Image":
-        # [Previous upload code remains the same]
-        pass
+        uploaded_file = st.file_uploader("Upload a car part image", type=["jpg", "jpeg", "png"])
 
-    else:
-        st.write("Point camera at a car part and tap the capture button")
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            html(get_webcam_html(), height=850)
-        
-        with col2:
-            result_container = st.container()
-            
-            if 'captured_image' in st.session_state:
-                with result_container:
-                    st.image(st.session_state.captured_image, caption="Captured Image")
-                    processed_img = preprocess_image(np.array(st.session_state.captured_image))
-                    class_name, confidence, all_predictions = predict(model, processed_img)
-                    
-                    st.markdown(f"**Top Prediction:** {class_name}")
-                    st.markdown(f"**Confidence:** {confidence:.1%}")
-                    
-                    st.markdown("### All Predictions")
-                    # Sort predictions by confidence
-                    predictions = [(name, float(pred)) for name, pred in zip(class_names, all_predictions)]
-                    predictions.sort(key=lambda x: x[1], reverse=True)
-                    
-                    # Show top 10 predictions
-                    for name, conf in predictions[:10]:
-                        st.progress(conf)
-                        st.caption(f"{name}: {conf:.1%}")
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded Image", use_column_width=True)
 
-        # Handle webcam capture
-        if st.session_state.get('webcam_frame'):
+            img_array = np.array(image)
+            processed_img = preprocess_image(img_array)
+
+            with st.spinner("Analyzing image..."):
+                class_name, confidence, all_predictions = predict(model, processed_img)
+
+            st.subheader("Prediction Results")
+            st.markdown(f"**Predicted Class:** {class_name}")
+            st.markdown(f"**Confidence:** {confidence:.1%}")
+
+            # Display detailed probabilities
+            st.markdown("### Class Probabilities")
+            for i, name in enumerate(class_names):
+                st.progress(float(all_predictions[i]))
+                st.caption(f"{name}: {all_predictions[i]:.1%}")
+
+            # Description
+            st.markdown("### Part Description")
+            st.markdown(class_info.get(class_name, "No description available."))
+
+    elif option == "Live Feed":
+        st.write("Click the button below to start the live feed.")
+
+        if st.button("Start Live Feed"):
+            # Replace <your-phone-ip> with your actual IP address
+            stream_url = "http://192.168.254.105:8080/video"  # IP address from the IP Webcam app
+            cap = cv2.VideoCapture(stream_url)
+            if not cap.isOpened():
+                st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
+                return
+
+            stframe = st.empty()
             try:
-                b64_string = st.session_state.webcam_frame.split(',')[1]
-                img_bytes = base64.b64decode(b64_string)
-                captured_image = Image.open(BytesIO(img_bytes))
-                st.session_state.captured_image = captured_image
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"Error processing capture: {str(e)}")
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        st.warning("Failed to capture frame. Please check your camera connection.")
+                        break
 
+                    processed_frame = preprocess_image(frame)
+                    class_name, confidence, _ = predict(model, processed_frame)
+
+                    # Display the predicted class and confidence on the live feed
+                    cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
+
+            except Exception as e:
+                st.error(f"Error during live feed: {str(e)}")
+            finally:
+                cap.release()
+
+# Run app
 if __name__ == "__main__":
     main()
