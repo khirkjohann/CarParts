@@ -7,215 +7,137 @@ import gdown
 import os
 import time
 
-# Page config
+# Page configuration
 st.set_page_config(
-    page_title="Potato Disease Detection",
-    page_icon="🥔",
+    page_title="Car Parts Classification",
+    page_icon="\ud83d\ude97",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-    <style>
-    .stAlert {
-        padding: 1rem;
-        border-radius: 0.5rem;
-    }
-    .upload-text {
-        text-align: center;
-        padding: 2rem;
-        border: 2px dashed #cccccc;
-        border-radius: 0.5rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Model loading with progress tracking
+# Model loading
 @st.cache_resource(show_spinner=False)
-def load_detection_model():
+def load_model():
     try:
-        model_path = 'models/potatoes.h5'
+        model_path = 'models/car_parts_model.h5'
         if not os.path.exists('models'):
             os.makedirs('models')
 
         if not os.path.exists(model_path):
-            with st.spinner('Downloading model... This might take a while...'):
-                model_url = "https://drive.google.com/uc?id=1XuvYZIPSs2LvzohWrza1bWaOMSxu23lr"
+            with st.spinner('Downloading model... Please wait.'):
+                model_url = "https://drive.google.com/uc?id=your-model-id"
                 gdown.download(model_url, output=model_path, quiet=True)
-
-        # Check if the file is downloaded correctly
-        if not os.path.exists(model_path):
-            raise FileNotFoundError("Model file not downloaded successfully.")
 
         return tf.keras.models.load_model(model_path)
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None
 
-
-# Disease classes with descriptions
-class_names = ['Potato___Early_blight', 'Potato___Late_blight', 'Potato___healthy']
+# Class names and descriptions (update as per your dataset)
+class_names = [
+            'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
+            'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
+            'CRANKSHAFT', 'CYLINDER HEAD', 'DISTRIBUTOR', 'ENGINE BLOCK', 'ENGINE VALVE',
+            'FUEL INJECTOR', 'FUSE BOX', 'GAS CAP', 'HEADLIGHTS', 'IDLER ARM',
+            'IGNITION COIL', 'INSTRUMENT CLUSTER', 'LEAF SPRING', 'LOWER CONTROL ARM',
+            'MUFFLER', 'OIL FILTER', 'OIL PAN', 'OIL PRESSURE SENSOR', 'OVERFLOW TANK',
+            'OXYGEN SENSOR', 'PISTON', 'PRESSURE PLATE', 'RADIATOR', 'RADIATOR FAN',
+            'RADIATOR HOSE', 'RADIO', 'RIM', 'SHIFT KNOB', 'SIDE MIRROR', 'SPARK PLUG',
+            'SPOILER', 'STARTER', 'TAILLIGHTS', 'THERMOSTAT', 'TORQUE CONVERTER',
+            'TRANSMISSION', 'VACUUM BRAKE BOOSTER', 'VALVE LIFTER', 'WATER PUMP',
+            'WINDOW REGULATOR'
+        ]
 
 class_info = {
-    'Potato___Early_blight': 'A fungal disease that causes dark spots with concentric rings on potato leaves, typically affecting older leaves first.',
-    'Potato___Late_blight': 'A devastating water mold infection causing dark, water-soaked spots on leaves that can quickly destroy entire plants.',
-    'Potato___healthy': 'Normal, healthy potato leaves showing no signs of disease.'
+    'Ignition Coil': 'Description of Ignition Coil.',
+    'Leaf Spring': 'Description of Leaf Spring.',
+    # Add descriptions for all classes
 }
 
-def predict_image(model, img_array):
-    """Predict disease class for preprocessed image array"""
-    prediction = model.predict(img_array, verbose=0)
+# Image preprocessing
+def preprocess_image(img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = tf.image.resize(img, [224, 224])
+    img = img / 255.0
+    return np.expand_dims(img, axis=0)
+
+# Prediction function
+def predict(model, img):
+    prediction = model.predict(img, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
     confidence = prediction[0][predicted_class_idx]
     return class_names[predicted_class_idx], confidence, prediction[0]
 
-def process_image(img):
-    """Process image to model input format with error handling"""
-    try:
-        if len(img.shape) == 2:  # Convert grayscale to RGB
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-        img = tf.image.resize(img, [224, 224])
-        img = img / 255.0
-        return np.expand_dims(img, axis=0)
-    except Exception as e:
-        st.error(f"Error processing image: {str(e)}")
-        return None
-
+# Main app
 def main():
-    st.title("🥔 Potato Leaf Disease Detection")
-    st.subheader("Upload a potato leaf image to detect diseases")
+    st.title("\ud83d\ude97 Car Parts Classification")
+    st.subheader("Upload an image or use the live feed to classify car parts")
 
-    # Load model with loading indicator
-    with st.spinner("Loading model..."):
-        model = load_detection_model()
+    model = load_model()
 
     if model is None:
-        st.error("Failed to load model. Please refresh the page to try again.")
-        st.stop()
+        st.error("Failed to load model. Please refresh the page.")
+        return
 
-    # File uploader with drag & drop
-    uploaded_file = st.file_uploader(
-        "Drag and drop a potato leaf image here",
-        type=["jpg", "jpeg", "png"],
-        help="Supported formats: JPG, JPEG, PNG"
-    )
+    # Sidebar options
+    option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Live Feed"])
 
-    if uploaded_file is not None:
-        try:
-            # Create two columns for layout
-            col1, col2 = st.columns([1, 1])
-            
-            with col1:
-                # Display original image
-                image = Image.open(uploaded_file)
-                st.image(image, caption="Uploaded Leaf Image", use_column_width=True)
+    if option == "Upload Image":
+        uploaded_file = st.file_uploader("Upload a car part image", type=["jpg", "jpeg", "png"])
 
-            with col2:
-                # Process and predict
-                start_time = time.time()
-                img_array = np.array(image)
-                processed_img = process_image(img_array)
-                
-                if processed_img is not None:
-                    with st.spinner("Analyzing leaf..."):
-                        class_name, confidence, all_predictions = predict_image(model, processed_img)
-                    
-                    # Display prediction results
-                    st.subheader("Detection Results")
-                    
-                    # Display main prediction with colored box
-                    prediction_color = {
-                        'Potato___healthy': 'success',
-                        'Potato___Early_blight': 'warning',
-                        'Potato___Late_blight': 'error'
-                    }
-                    
-                    # Clean up class name for display
-                    display_name = class_name.replace('Potato___', '').replace('_', ' ').title()
-                    
-                    st.markdown(f"### Detected Condition: {display_name}")
-                    st.markdown(f"**Confidence:** {confidence:.1%}")
-                    
-                    # Display description
-                    st.markdown(f"**Description:**")
-                    st.markdown(class_info[class_name])
-                    
-                    # Show all probabilities
-                    st.markdown("### Detailed Analysis")
-                    for i, name in enumerate(class_names):
-                        prob = all_predictions[i]
-                        display_name = name.replace('Potato___', '').replace('_', ' ').title()
-                        st.progress(float(prob))
-                        st.caption(f"{display_name}: {prob:.1%}")
-                    
-                    # Display processing time
-                    processing_time = time.time() - start_time
-                    st.caption(f"Processing time: {processing_time:.2f} seconds")
-                    
-                    # Add recommendations based on detection
-                    if class_name != 'Potato___healthy':
-                        st.markdown("### Recommendations")
-                        if class_name == 'Potato___Early_blight':
-                            st.warning("""
-                            - Remove and destroy infected leaves
-                            - Apply appropriate fungicides
-                            - Ensure proper plant spacing for good air circulation
-                            - Water at the base of plants to keep leaves dry
-                            """)
-                        else:  # Late Blight
-                            st.error("""
-                            - Immediately isolate infected plants
-                            - Apply copper-based fungicides
-                            - Improve drainage in the field
-                            - Monitor weather conditions for high humidity
-                            - Consider removing severely infected plants
-                            """)
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded Image", use_column_width=True)
 
-        except Exception as e:
-            st.error(f"Error analyzing image: {str(e)}")
-            st.info("Please try uploading a different image")
+            img_array = np.array(image)
+            processed_img = preprocess_image(img_array)
 
-    # Sidebar information
-    with st.sidebar:
-        st.header("About")
-        st.markdown("""
-        This application uses deep learning to detect diseases in potato leaves. 
-        It can identify:
-        - Early Blight
-        - Late Blight
-        - Healthy Leaves
-        
-        ### How to use:
-        1. Upload an image of a potato leaf
-        2. Wait for the analysis
-        3. View the detection results and recommendations
-        
-        ### Tips for best results:
-        - Use clear, well-lit images
-        - Ensure the leaf is the main focus
-        - Avoid blurry or dark images
-        """)
-        
-        # Add expandable section for disease information
-        with st.expander("Learn About Potato Diseases"):
-            for disease in class_names:
-                display_name = disease.replace('Potato___', '').replace('_', ' ').title()
-                st.markdown(f"**{display_name}**")
-                st.markdown(class_info[disease])
-                st.markdown("---")
+            with st.spinner("Analyzing image..."):
+                class_name, confidence, all_predictions = predict(model, processed_img)
 
-    # Footer
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center'>
-            <p>Created with ❤️ by [Your Name] | 
-            <a href="https://github.com/yourusername/potato-disease-detection" target="_blank">GitHub</a></p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            st.subheader("Prediction Results")
+            st.markdown(f"**Predicted Class:** {class_name}")
+            st.markdown(f"**Confidence:** {confidence:.1%}")
 
+            # Display detailed probabilities
+            st.markdown("### Class Probabilities")
+            for i, name in enumerate(class_names):
+                st.progress(float(all_predictions[i]))
+                st.caption(f"{name}: {all_predictions[i]:.1%}")
+
+            # Description
+            st.markdown("### Part Description")
+            st.markdown(class_info.get(class_name, "No description available."))
+
+    elif option == "Live Feed":
+        st.write("Click the button below to start the live feed.")
+
+        if st.button("Start Live Feed"):
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                st.error("Failed to access the camera.")
+                return
+
+            stframe = st.empty()
+            try:
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        st.warning("Failed to capture frame. Please check your camera.")
+                        break
+
+
+                    processed_frame = preprocess_image(frame)
+                    class_name, confidence, _ = predict(model, processed_frame)
+
+                    cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
+
+            except Exception as e:
+                st.error(f"Error during live feed: {str(e)}")
+            finally:
+                cap.release()
+
+# Run app
 if __name__ == "__main__":
     main()
