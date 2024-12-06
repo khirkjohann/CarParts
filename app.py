@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 import gdown
 import os
-import time
 
 # Page configuration
 st.set_page_config(
@@ -24,7 +23,7 @@ def load_model():
 
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... Please wait.'):
-                model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"  # Corrected URL format
+                model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"
                 gdown.download(model_url, output=model_path, quiet=True)
 
         return tf.keras.models.load_model(model_path)
@@ -112,9 +111,11 @@ def main():
         st.write("Click the button below to start the live feed.")
 
         if st.button("Start Live Feed"):
-            cap = cv2.VideoCapture(0)  # Dynamically using index 0 (primary camera)
+            # Replace <your-phone-ip> with your actual IP address
+            stream_url = "http://192.168.254.105:8080/video"  # IP address from the IP Webcam app
+            cap = cv2.VideoCapture(stream_url)
             if not cap.isOpened():
-                st.error("Failed to access the camera. Please check your camera settings.")
+                st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
                 return
 
             stframe = st.empty()
@@ -122,12 +123,13 @@ def main():
                 while True:
                     ret, frame = cap.read()
                     if not ret:
-                        st.warning("Failed to capture frame. Please check your camera.")
+                        st.warning("Failed to capture frame. Please check your camera connection.")
                         break
 
                     processed_frame = preprocess_image(frame)
                     class_name, confidence, _ = predict(model, processed_frame)
 
+                    # Display the predicted class and confidence on the live feed
                     cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
 
