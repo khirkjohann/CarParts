@@ -97,11 +97,16 @@ def main():
             st.markdown(f"**Predicted Class:** {class_name}")
             st.markdown(f"**Confidence:** {confidence:.1%}")
 
+            # Sort and filter predictions
+            predictions_with_names = list(zip(class_names, all_predictions))
+            sorted_predictions = sorted(predictions_with_names, key=lambda x: x[1], reverse=True)
+            non_zero_predictions = [(name, prob) for name, prob in sorted_predictions if prob > 0]
+
             # Display detailed probabilities
             st.markdown("### Class Probabilities")
-            for i, name in enumerate(class_names):
-                st.progress(float(all_predictions[i]))
-                st.caption(f"{name}: {all_predictions[i]:.1%}")
+            for name, prob in non_zero_predictions:
+                st.progress(float(prob))
+                st.caption(f"{name}: {prob:.1%}")
 
             # Description
             st.markdown("### Part Description")
@@ -111,8 +116,7 @@ def main():
         st.write("Click the button below to start the live feed.")
 
         if st.button("Start Live Feed"):
-            # Replace <your-phone-ip> with your actual IP address
-            stream_url = "http://192.168.254.105:8080/video"  # IP address from the IP Webcam app
+            stream_url = "http://192.168.254.105:8080/video"
             cap = cv2.VideoCapture(stream_url)
             if not cap.isOpened():
                 st.error("Failed to access the camera. Make sure your Android device is connected to the same network.")
@@ -129,7 +133,6 @@ def main():
                     processed_frame = preprocess_image(frame)
                     class_name, confidence, _ = predict(model, processed_frame)
 
-                    # Display the predicted class and confidence on the live feed
                     cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
 
@@ -138,6 +141,5 @@ def main():
             finally:
                 cap.release()
 
-# Run app
 if __name__ == "__main__":
     main()
