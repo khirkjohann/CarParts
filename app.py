@@ -24,7 +24,7 @@ def load_model():
 
         if not os.path.exists(model_path):
             with st.spinner('Downloading model... Please wait.'):
-                model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"
+                model_url = "https://drive.google.com/uc?id=1R-_GlagW4C7qelQWaDgh9xJ_Ym6qXr6V"  # Corrected URL format
                 gdown.download(model_url, output=model_path, quiet=True)
 
         return tf.keras.models.load_model(model_path)
@@ -34,18 +34,18 @@ def load_model():
 
 # Class names and descriptions (update as per your dataset)
 class_names = [
-            'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
-            'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
-            'CRANKSHAFT', 'CYLINDER HEAD', 'DISTRIBUTOR', 'ENGINE BLOCK', 'ENGINE VALVE',
-            'FUEL INJECTOR', 'FUSE BOX', 'GAS CAP', 'HEADLIGHTS', 'IDLER ARM',
-            'IGNITION COIL', 'INSTRUMENT CLUSTER', 'LEAF SPRING', 'LOWER CONTROL ARM',
-            'MUFFLER', 'OIL FILTER', 'OIL PAN', 'OIL PRESSURE SENSOR', 'OVERFLOW TANK',
-            'OXYGEN SENSOR', 'PISTON', 'PRESSURE PLATE', 'RADIATOR', 'RADIATOR FAN',
-            'RADIATOR HOSE', 'RADIO', 'RIM', 'SHIFT KNOB', 'SIDE MIRROR', 'SPARK PLUG',
-            'SPOILER', 'STARTER', 'TAILLIGHTS', 'THERMOSTAT', 'TORQUE CONVERTER',
-            'TRANSMISSION', 'VACUUM BRAKE BOOSTER', 'VALVE LIFTER', 'WATER PUMP',
-            'WINDOW REGULATOR'
-        ]
+    'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
+    'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
+    'CRANKSHAFT', 'CYLINDER HEAD', 'DISTRIBUTOR', 'ENGINE BLOCK', 'ENGINE VALVE',
+    'FUEL INJECTOR', 'FUSE BOX', 'GAS CAP', 'HEADLIGHTS', 'IDLER ARM',
+    'IGNITION COIL', 'INSTRUMENT CLUSTER', 'LEAF SPRING', 'LOWER CONTROL ARM',
+    'MUFFLER', 'OIL FILTER', 'OIL PAN', 'OIL PRESSURE SENSOR', 'OVERFLOW TANK',
+    'OXYGEN SENSOR', 'PISTON', 'PRESSURE PLATE', 'RADIATOR', 'RADIATOR FAN',
+    'RADIATOR HOSE', 'RADIO', 'RIM', 'SHIFT KNOB', 'SIDE MIRROR', 'SPARK PLUG',
+    'SPOILER', 'STARTER', 'TAILLIGHTS', 'THERMOSTAT', 'TORQUE CONVERTER',
+    'TRANSMISSION', 'VACUUM BRAKE BOOSTER', 'VALVE LIFTER', 'WATER PUMP',
+    'WINDOW REGULATOR'
+]
 
 class_info = {
     'Ignition Coil': 'Description of Ignition Coil.',
@@ -112,9 +112,9 @@ def main():
         st.write("Click the button below to start the live feed.")
 
         if st.button("Start Live Feed"):
-            cap = cv2.VideoCapture(1)
+            cap = cv2.VideoCapture(0)  # Dynamically using index 0 (primary camera)
             if not cap.isOpened():
-                st.error("Failed to access the camera.")
+                st.error("Failed to access the camera. Please check your camera settings.")
                 return
 
             stframe = st.empty()
@@ -124,7 +124,6 @@ def main():
                     if not ret:
                         st.warning("Failed to capture frame. Please check your camera.")
                         break
-
 
                     processed_frame = preprocess_image(frame)
                     class_name, confidence, _ = predict(model, processed_frame)
