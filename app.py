@@ -56,8 +56,8 @@ def predict(model, img):
 
 # Main app
 def main():
-    st.title("Car Parts Classification")
-    st.subheader("Upload an image or use the live feed to classify car parts")
+    st.title("Potato Leaf Disease Detection")
+    st.subheader("Upload an image or use the live feed to detect")
 
     model = load_model()
 
@@ -69,7 +69,7 @@ def main():
     option = st.sidebar.radio("Select Input Method:", ["Upload Image", "Live Feed"])
 
     if option == "Upload Image":
-        uploaded_file = st.file_uploader("Upload a car part image", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("Upload a leaf image", type=["jpg", "jpeg", "png"])
 
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
