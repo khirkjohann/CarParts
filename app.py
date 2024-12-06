@@ -110,10 +110,13 @@ def main():
     elif option == "Webcam":
         st.write("Click the button below to start the webcam.")
 
+        elif option == "Webcam":
+        st.write("Click the button below to start the webcam.")
+
         if st.button("Start Webcam"):
-            cap = cv2.VideoCapture(0)  # Use default webcam (0)
-            if not cap.isOpened():
-                st.error("Failed to access the webcam. Please check your camera connection.")
+            cap = get_webcam()
+            if cap is None:
+                st.error("No webcam found. Please ensure it's connected and permissions are granted.")
                 return
 
             stframe = st.empty()
@@ -123,13 +126,11 @@ def main():
                 while not stop_button:
                     ret, frame = cap.read()
                     if not ret:
-                        st.warning("Failed to capture frame. Please check your camera connection.")
                         break
 
                     processed_frame = preprocess_image(frame)
                     class_name, confidence, _ = predict(model, processed_frame)
 
-                    # Display the predicted class and confidence on the live feed
                     cv2.putText(frame, f"{class_name} ({confidence:.1%})", (10, 30), 
                               cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     stframe.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), use_column_width=True)
@@ -137,8 +138,6 @@ def main():
                     if stop_button:
                         break
 
-            except Exception as e:
-                st.error(f"Error during webcam feed: {str(e)}")
             finally:
                 cap.release()
 
