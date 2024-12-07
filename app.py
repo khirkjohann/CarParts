@@ -5,7 +5,6 @@ import numpy as np
 import gdown
 import os
 
-# Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
@@ -15,7 +14,7 @@ st.set_page_config(
     }
 )
 
-# Custom CSS
+# Custom CSS with updated progress bar styling
 st.markdown("""
     <style>
         .main > div {
@@ -24,6 +23,10 @@ st.markdown("""
         }
         .stProgress > div > div > div {
             background-color: #4CAF50;
+        }
+        /* Style for low confidence predictions */
+        .low-confidence .stProgress > div > div > div {
+            background-color: #f8f9fa;
         }
         .prediction-box {
             background-color: #f8f9fa;
@@ -114,9 +117,17 @@ def display_results(class_name, confidence, all_predictions):
         predictions_with_names = list(zip(class_names, all_predictions))
         sorted_predictions = sorted(predictions_with_names, key=lambda x: x[1], reverse=True)[:5]
         
-        for name, prob in sorted_predictions:
-            st.progress(float(prob))
-            st.caption(f"{name}: {prob:.1%}")
+        # Display the top prediction with green progress bar
+        top_name, top_prob = sorted_predictions[0]
+        st.progress(float(top_prob))
+        st.caption(f"{top_name}: {top_prob:.1%}")
+        
+        # Display other predictions with clear/gray progress bars
+        with st.markdown('<div class="low-confidence">', unsafe_allow_html=True):
+            for name, prob in sorted_predictions[1:]:
+                st.progress(float(prob))
+                st.caption(f"{name}: {prob:.1%}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 def main():
     # Header
