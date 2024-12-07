@@ -5,6 +5,7 @@ import numpy as np
 import gdown
 import os
 
+# Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
@@ -14,19 +15,12 @@ st.set_page_config(
     }
 )
 
-# Custom CSS with updated progress bar styling
+# Custom CSS
 st.markdown("""
     <style>
         .main > div {
             padding: 2rem;
             border-radius: 0.5rem;
-        }
-        .stProgress > div > div > div {
-            background-color: #4CAF50;
-        }
-        /* Style for low confidence predictions */
-        .low-confidence .stProgress > div > div > div {
-            background-color: #f8f9fa;
         }
         .prediction-box {
             background-color: #f8f9fa;
@@ -34,6 +28,23 @@ st.markdown("""
             border-radius: 0.5rem;
             border: 1px solid #dee2e6;
             margin: 1rem 0;
+        }
+        .prediction-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .prediction-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+        }
+        .prediction-list li:last-child {
+            border-bottom: none;
+        }
+        .confidence {
+            float: right;
+            color: #4CAF50;
+            font-weight: bold;
         }
         .stButton>button {
             width: 100%;
@@ -113,21 +124,20 @@ def display_results(class_name, confidence, all_predictions):
         st.info(class_info.get(class_name, "No description available."))
     
     with col2:
-        st.markdown("### Top 5 Predictions")
+        st.markdown("### Top Predictions")
         predictions_with_names = list(zip(class_names, all_predictions))
-        sorted_predictions = sorted(predictions_with_names, key=lambda x: x[1], reverse=True)[:5]
+        # Filter predictions with confidence > 0 and sort by confidence
+        valid_predictions = [(name, prob) for name, prob in predictions_with_names if prob > 0]
+        sorted_predictions = sorted(valid_predictions, key=lambda x: x[1], reverse=True)[:5]
         
-        # Display the top prediction with green progress bar
-        top_name, top_prob = sorted_predictions[0]
-        st.progress(float(top_prob))
-        st.caption(f"{top_name}: {top_prob:.1%}")
-        
-        # Display other predictions with clear/gray progress bars
-        with st.markdown('<div class="low-confidence">', unsafe_allow_html=True):
-            for name, prob in sorted_predictions[1:]:
-                st.progress(float(prob))
-                st.caption(f"{name}: {prob:.1%}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Display predictions as a clean list
+        st.markdown('<ul class="prediction-list">', unsafe_allow_html=True)
+        for name, prob in sorted_predictions:
+            st.markdown(
+                f'<li>{name}<span class="confidence">{prob:.1%}</span></li>',
+                unsafe_allow_html=True
+            )
+        st.markdown('</ul>', unsafe_allow_html=True)
 
 def main():
     # Header
