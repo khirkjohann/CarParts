@@ -4,9 +4,8 @@ from PIL import Image
 import numpy as np
 import gdown
 import os
-import cv2
 
-# Page configuration (kept the same as original)
+# Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
@@ -16,7 +15,7 @@ st.set_page_config(
     }
 )
 
-# Custom CSS (kept the same as original)
+# Custom CSS
 st.markdown("""
     <style>
         .main > div {
@@ -76,7 +75,7 @@ def load_model():
         st.error(f"⚠️ Error loading model: {str(e)}")
         return None
 
-# Class names and descriptions (kept the same as original)
+# Class names and descriptions
 class_names = [
     'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
     'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
@@ -97,34 +96,27 @@ class_info = {
 }
 
 def preprocess_image(img):
-    # Convert PIL Image to numpy array and preprocess
-    img_array = np.array(img.convert("RGB"))
-    img_resized = tf.image.resize(img_array, [224, 224])
-    img_normalized = img_resized / 255.0
-    return np.expand_dims(img_normalized, axis=0)
+    img = img.convert("RGB")
+    img = np.array(img)
+    img = tf.image.resize(img, [224, 224])
+    img = img / 255.0
+    return np.expand_dims(img, axis=0)
 
 def predict(model, img):
-    # Predict the car part and get confidence
     prediction = model.predict(img, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
     confidence = prediction[0][predicted_class_idx]
     return class_names[predicted_class_idx], confidence, prediction[0]
 
 def draw_prediction_on_image(img, class_name, confidence):
-    # Convert PIL Image to numpy array
-    img_array = np.array(img)
-    
-    # Create a PIL drawing context
     from PIL import ImageDraw, ImageFont
     draw = ImageDraw.Draw(img)
     
-    # Use a default font
     try:
         font = ImageFont.truetype("arial.ttf", 20)
     except IOError:
         font = ImageFont.load_default()
     
-    # Draw text on the image
     text = f"{class_name} ({confidence:.1%})"
     draw.text((10, 10), text, fill=(0, 255, 0), font=font)
     
@@ -134,7 +126,7 @@ def main():
     # Header
     st.markdown("""
         <h1 style='text-align: center; color: #2E7D32;'>🚗 Car Parts Classification</h1>
-        <p style='text-align: center; font-size: 1.2em;'>Upload an image or use the live feed to identify car parts</p>
+        <p style='text-align: center; font-size: 1.2em;'>Real-Time Car Parts Detection</p>
         <hr>
     """, unsafe_allow_html=True)
 
@@ -146,88 +138,55 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.markdown("### 🛠️ Input Options")
-        option = st.radio("Select Input Method:", ["Upload Image 📁", "Live Feed 📸"])
-        
-        st.markdown("### Prediction Settings")
+        st.markdown("### 🛠️ Detection Settings")
         confidence_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.1)
+        frame_delay = st.slider("Detection Frequency", 1, 10, 3, 1, 
+                                help="Lower values process more frames but may reduce performance")
         
         st.markdown("### ℹ️ About")
         st.info("""
-            This application uses machine learning to identify various car parts.
-            It can recognize 50 different types of automotive components with high accuracy.
+            Real-time car parts detection using machine learning.
+            Adjust confidence threshold to filter predictions.
         """)
 
-    if option == "Upload Image 📁":
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-        
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_column_width=True)
-            
-            with st.spinner("🔍 Analyzing image..."):
-                processed_img = preprocess_image(image)
-                class_name, confidence, all_predictions = predict(model, processed_img)
-                
-                # Filter by confidence threshold
-                if confidence >= confidence_threshold:
-                    # Draw prediction on image
-                    annotated_image = draw_prediction_on_image(image, class_name, confidence)
-                    st.image(annotated_image, caption="Prediction", use_column_width=True)
-                
-                # Original prediction display
-                display_results(class_name, confidence, all_predictions)
+    # Continuous camera input
+    camera_placeholder = st.empty()
+    predictions_placeholder = st.empty()
 
-    else:  # Live Feed option
-        st.markdown("### 📸 Live Camera Feed")
-        camera_input = st.camera_input("Take a picture", key="camera_input")
+    # Frame processing counter
+    frame_count = 0
+
+    while True:
+        # Capture frame from camera
+        camera_input = st.camera_input("", key=f"camera_{frame_count}", label_visibility="collapsed")
         
         if camera_input:
-            image = Image.open(camera_input)
-            
-            with st.spinner("🔍 Analyzing image..."):
-                processed_img = preprocess_image(image)
-                class_name, confidence, all_predictions = predict(model, processed_img)
+            # Process every nth frame
+            frame_count += 1
+            if frame_count % frame_delay == 0:
+                image = Image.open(camera_input)
                 
-                # Filter by confidence threshold
-                if confidence >= confidence_threshold:
-                    # Draw prediction on image
-                    annotated_image = draw_prediction_on_image(image, class_name, confidence)
-                    st.image(annotated_image, caption="Prediction", use_column_width=True)
-                
-                # Original prediction display
-                display_results(class_name, confidence, all_predictions)
-
-def display_results(class_name, confidence, all_predictions):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-            <div class="prediction-box">
-                <h3>Primary Prediction</h3>
-                <h2 style='color: #4CAF50;'>{}</h2>
-                <h4>Confidence: {:.1%}</h4>
-            </div>
-        """.format(class_name, confidence), unsafe_allow_html=True)
-        
-        st.markdown("### Part Description")
-        st.info(class_info.get(class_name, "No description available."))
-    
-    with col2:
-        st.markdown("### Top Predictions")
-        predictions_with_names = list(zip(class_names, all_predictions))
-        # Filter predictions with confidence > 0 and sort by confidence
-        valid_predictions = [(name, prob) for name, prob in predictions_with_names if prob > 0]
-        sorted_predictions = sorted(valid_predictions, key=lambda x: x[1], reverse=True)[:5]
-        
-        # Display predictions as a clean list
-        st.markdown('<ul class="prediction-list">', unsafe_allow_html=True)
-        for name, prob in sorted_predictions:
-            st.markdown(
-                f'<li>{name}<span class="confidence">{prob:.1%}</span></li>',
-                unsafe_allow_html=True
-            )
-        st.markdown('</ul>', unsafe_allow_html=True)
+                with st.spinner("🔍 Analyzing..."):
+                    processed_img = preprocess_image(image)
+                    class_name, confidence, all_predictions = predict(model, processed_img)
+                    
+                    # Filter by confidence threshold
+                    if confidence >= confidence_threshold:
+                        # Draw prediction on image
+                        annotated_image = draw_prediction_on_image(image, class_name, confidence)
+                        camera_placeholder.image(annotated_image, caption="Current Detection")
+                        
+                        # Prepare and display top predictions
+                        predictions_with_names = list(zip(class_names, all_predictions))
+                        valid_predictions = [(name, prob) for name, prob in predictions_with_names if prob >= confidence_threshold]
+                        sorted_predictions = sorted(valid_predictions, key=lambda x: x[1], reverse=True)[:5]
+                        
+                        # Display predictions
+                        predictions_html = "<ul class='prediction-list'>"
+                        for name, prob in sorted_predictions:
+                            predictions_html += f'<li>{name}<span class="confidence">{prob:.1%}</span></li>'
+                        predictions_html += '</ul>'
+                        predictions_placeholder.markdown(predictions_html, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
