@@ -1,6 +1,5 @@
 streamlit
-tensorflow==2.16.1
+tensorflow
 opencv-python-headless
-numpy
 gdown
-streamlit-webrtc==0.47.1
+streamlit-webrtc
