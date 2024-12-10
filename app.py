@@ -4,8 +4,9 @@ from PIL import Image
 import numpy as np
 import gdown
 import os
+import cv2
 
-# Page configuration
+# Page configuration (kept the same as original)
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
@@ -15,7 +16,7 @@ st.set_page_config(
     }
 )
 
-# Custom CSS
+# Custom CSS (kept the same as original)
 st.markdown("""
     <style>
         .main > div {
@@ -75,7 +76,7 @@ def load_model():
         st.error(f"⚠️ Error loading model: {str(e)}")
         return None
 
-# Class names and descriptions
+# Class names and descriptions (kept the same as original)
 class_names = [
     'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
     'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
@@ -96,17 +97,106 @@ class_info = {
 }
 
 def preprocess_image(img):
-    img = img.convert("RGB")
-    img = np.array(img)
-    img = tf.image.resize(img, [224, 224])
-    img = img / 255.0
-    return np.expand_dims(img, axis=0)
+    # Convert PIL Image to numpy array and preprocess
+    img_array = np.array(img.convert("RGB"))
+    img_resized = tf.image.resize(img_array, [224, 224])
+    img_normalized = img_resized / 255.0
+    return np.expand_dims(img_normalized, axis=0)
 
 def predict(model, img):
+    # Predict the car part and get confidence
     prediction = model.predict(img, verbose=0)
     predicted_class_idx = np.argmax(prediction[0])
     confidence = prediction[0][predicted_class_idx]
     return class_names[predicted_class_idx], confidence, prediction[0]
+
+def draw_prediction_on_image(img, class_name, confidence):
+    # Convert PIL Image to numpy array
+    img_array = np.array(img)
+    
+    # Create a PIL drawing context
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(img)
+    
+    # Use a default font
+    try:
+        font = ImageFont.truetype("arial.ttf", 20)
+    except IOError:
+        font = ImageFont.load_default()
+    
+    # Draw text on the image
+    text = f"{class_name} ({confidence:.1%})"
+    draw.text((10, 10), text, fill=(0, 255, 0), font=font)
+    
+    return img
+
+def main():
+    # Header
+    st.markdown("""
+        <h1 style='text-align: center; color: #2E7D32;'>🚗 Car Parts Classification</h1>
+        <p style='text-align: center; font-size: 1.2em;'>Upload an image or use the live feed to identify car parts</p>
+        <hr>
+    """, unsafe_allow_html=True)
+
+    model = load_model()
+
+    if model is None:
+        st.error("❌ Failed to load model. Please refresh the page.")
+        return
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### 🛠️ Input Options")
+        option = st.radio("Select Input Method:", ["Upload Image 📁", "Live Feed 📸"])
+        
+        st.markdown("### Prediction Settings")
+        confidence_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.1)
+        
+        st.markdown("### ℹ️ About")
+        st.info("""
+            This application uses machine learning to identify various car parts.
+            It can recognize 50 different types of automotive components with high accuracy.
+        """)
+
+    if option == "Upload Image 📁":
+        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+        
+        if uploaded_file:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded Image", use_column_width=True)
+            
+            with st.spinner("🔍 Analyzing image..."):
+                processed_img = preprocess_image(image)
+                class_name, confidence, all_predictions = predict(model, processed_img)
+                
+                # Filter by confidence threshold
+                if confidence >= confidence_threshold:
+                    # Draw prediction on image
+                    annotated_image = draw_prediction_on_image(image, class_name, confidence)
+                    st.image(annotated_image, caption="Prediction", use_column_width=True)
+                
+                # Original prediction display
+                display_results(class_name, confidence, all_predictions)
+
+    else:  # Live Feed option
+        st.markdown("### 📸 Live Camera Feed")
+        camera_input = st.camera_input("Take a picture", key="camera_input")
+        
+        if camera_input:
+            image = Image.open(camera_input)
+            
+            with st.spinner("🔍 Analyzing image..."):
+                processed_img = preprocess_image(image)
+                class_name, confidence, all_predictions = predict(model, processed_img)
+                
+                # Filter by confidence threshold
+                if confidence >= confidence_threshold:
+                    # Draw prediction on image
+                    annotated_image = draw_prediction_on_image(image, class_name, confidence)
+                    st.image(annotated_image, caption="Prediction", use_column_width=True)
+                
+                # Original prediction display
+                display_results(class_name, confidence, all_predictions)
 
 def display_results(class_name, confidence, all_predictions):
     col1, col2 = st.columns(2)
@@ -138,57 +228,6 @@ def display_results(class_name, confidence, all_predictions):
                 unsafe_allow_html=True
             )
         st.markdown('</ul>', unsafe_allow_html=True)
-
-def main():
-    # Header
-    st.markdown("""
-        <h1 style='text-align: center; color: #2E7D32;'>🚗 Car Parts Classification</h1>
-        <p style='text-align: center; font-size: 1.2em;'>Upload an image or use the live feed to identify car parts</p>
-        <hr>
-    """, unsafe_allow_html=True)
-
-    model = load_model()
-
-    if model is None:
-        st.error("❌ Failed to load model. Please refresh the page.")
-        return
-
-    # Sidebar
-    with st.sidebar:
-        st.markdown("### 🛠️ Input Options")
-        option = st.radio("Select Input Method:", ["Upload Image 📁", "Live Feed 📸"])
-        
-        st.markdown("### ℹ️ About")
-        st.info("""
-            This application uses machine learning to identify various car parts.
-            It can recognize 50 different types of automotive components with high accuracy.
-        """)
-
-    if option == "Upload Image 📁":
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-        
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_column_width=True)
-            
-            with st.spinner("🔍 Analyzing image..."):
-                processed_img = preprocess_image(image)
-                class_name, confidence, all_predictions = predict(model, processed_img)
-                
-            display_results(class_name, confidence, all_predictions)
-
-    else:  # Live Feed option
-        st.markdown("### 📸 Live Camera Feed")
-        camera_input = st.camera_input("Take a picture")
-        
-        if camera_input:
-            image = Image.open(camera_input)
-            
-            with st.spinner("🔍 Analyzing image..."):
-                processed_img = preprocess_image(image)
-                class_name, confidence, all_predictions = predict(model, processed_img)
-                
-            display_results(class_name, confidence, all_predictions)
 
 if __name__ == "__main__":
     main()
