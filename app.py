@@ -16,10 +16,11 @@ st.set_page_config(
 )
 
 # Set up an asyncio event loop explicitly
-if not asyncio.get_event_loop_policy().get_event_loop():
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-
 # Model loading with improved error handling
 @st.cache_resource(show_spinner=False)
 def load_model():
