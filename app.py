@@ -15,14 +15,10 @@ st.set_page_config(
     menu_items={"About": "Car Parts Classification System - Powered by TensorFlow"}
 )
 
-# Asyncio debug for deployment
-asyncio_loop = asyncio.get_event_loop()
-
-def exception_handler(loop, context):
-    st.error(f"Exception in asyncio loop: {context}")
-    print(f"Exception in asyncio loop: {context}")
-
-asyncio_loop.set_exception_handler(exception_handler)
+# Set up an asyncio event loop explicitly
+if not asyncio.get_event_loop_policy().get_event_loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
 # Model loading with improved error handling
 @st.cache_resource(show_spinner=False)
