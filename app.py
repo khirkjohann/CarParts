@@ -5,58 +5,24 @@ import numpy as np
 import gdown
 import os
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import asyncio
 
 # Page configuration
 st.set_page_config(
     page_title="Car Parts Classification",
     layout="wide",
     initial_sidebar_state="expanded",
-    menu_items={
-        'About': "Car Parts Classification System - Powered by TensorFlow"
-    }
+    menu_items={"About": "Car Parts Classification System - Powered by TensorFlow"}
 )
 
-# Custom CSS
-st.markdown("""
-    <style>
-        .main > div {
-            padding: 2rem;
-            border-radius: 0.5rem;
-        }
-        .prediction-box {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid #dee2e6;
-            margin: 1rem 0;
-        }
-        .prediction-list {
-            list-style-type: none;
-            padding: 0;
-        }
-        .prediction-list li {
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #eee;
-            font-size: 1.1rem;
-        }
-        .prediction-list li:last-child {
-            border-bottom: none;
-        }
-        .confidence {
-            float: right;
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        .stButton>button {
-            width: 100%;
-            background-color: #4CAF50;
-            color: white;
-        }
-        .css-1v0mbdj.etr89bj1 {
-            margin-top: 2rem;
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Asyncio debug for deployment
+asyncio_loop = asyncio.get_event_loop()
+
+def exception_handler(loop, context):
+    st.error(f"Exception in asyncio loop: {context}")
+    print(f"Exception in asyncio loop: {context}")
+
+asyncio_loop.set_exception_handler(exception_handler)
 
 # Model loading with improved error handling
 @st.cache_resource(show_spinner=False)
@@ -76,7 +42,7 @@ def load_model():
         st.error(f"⚠️ Error loading model: {str(e)}")
         return None
 
-# Class names and descriptions
+# Class names
 class_names = [
     'AIR COMPRESSOR', 'ALTERNATOR', 'BATTERY', 'BRAKE CALIPER', 'BRAKE PAD',
     'BRAKE ROTOR', 'CAMSHAFT', 'CARBERATOR', 'CLUTCH PLATE', 'COIL SPRING',
@@ -91,6 +57,7 @@ class_names = [
     'WINDOW REGULATOR'
 ]
 
+# Video transformer
 class CarPartsDetector(VideoTransformerBase):
     def __init__(self, model, confidence_threshold=0.5):
         self.model = model
@@ -98,105 +65,50 @@ class CarPartsDetector(VideoTransformerBase):
         self.class_names = class_names
 
     def preprocess_image(self, img):
-        # Resize and normalize the image for model prediction
         img_resized = cv2.resize(img, (224, 224))
         img_normalized = img_resized / 255.0
         return np.expand_dims(img_normalized, axis=0)
 
     def predict(self, img):
-        # Predict the car part and get confidence
         prediction = self.model.predict(img, verbose=0)
         predicted_class_idx = np.argmax(prediction[0])
         confidence = prediction[0][predicted_class_idx]
         return self.class_names[predicted_class_idx], confidence, prediction[0]
 
     def draw_prediction_on_frame(self, frame, class_name, confidence):
-        # Draw prediction text on the frame
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.7
-        font_thickness = 2
-        
-        # Top prediction box
         text = f"{class_name} ({confidence:.1%})"
-        (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-        cv2.rectangle(frame, (10, 30), (20 + text_width, 50), (0, 255, 0), -1)
-        cv2.putText(frame, text, (15, 50), font, font_scale, (0, 0, 0), font_thickness)
-        
+        cv2.putText(frame, text, (10, 30), font, 0.7, (0, 255, 0), 2)
         return frame
 
     def transform(self, frame):
-        # Convert frame to numpy array
-        img = frame.to_ndarray(format="bgr")
-        
-        # Prepare frame for prediction
-        processed_frame = self.preprocess_image(img)
-
-        # Predict car part
-        class_name, confidence, all_predictions = self.predict(processed_frame)
-
-        # Filter predictions by confidence threshold
-        if confidence >= self.confidence_threshold:
-            # Draw prediction on frame
-            img = self.draw_prediction_on_frame(img, class_name, confidence)
-
-            # Update sidebar predictions (we'll handle this separately)
-            predictions_with_names = list(zip(self.class_names, all_predictions))
-            valid_predictions = [(name, prob) for name, prob in predictions_with_names if prob >= self.confidence_threshold]
-            sorted_predictions = sorted(valid_predictions, key=lambda x: x[1], reverse=True)[:5]
-            
-            # Store predictions in session state for sidebar display
-            st.session_state.top_predictions = sorted_predictions
-
-        return img
+        try:
+            img = frame.to_ndarray(format="bgr")
+            processed_frame = self.preprocess_image(img)
+            class_name, confidence, _ = self.predict(processed_frame)
+            if confidence >= self.confidence_threshold:
+                img = self.draw_prediction_on_frame(img, class_name, confidence)
+            return img
+        except Exception as e:
+            st.error(f"Error in video processing: {e}")
+            return frame.to_ndarray(format="bgr")
 
 def main():
-    # Header
-    st.markdown("""
-        <h1 style='text-align: center; color: #2E7D32;'>🚗 Car Parts Classification</h1>
-        <p style='text-align: center; font-size: 1.2em;'>Real-Time Car Parts Detection</p>
-        <hr>
-    """, unsafe_allow_html=True)
+    st.markdown("## 🚗 Car Parts Classification App")
+    st.info("Real-time car parts detection using a machine learning model.")
 
     model = load_model()
-
     if model is None:
-        st.error("❌ Failed to load model. Please refresh the page.")
+        st.error("❌ Failed to load model. Please try again later.")
         return
 
-    # Sidebar
-    with st.sidebar:
-        st.markdown("### 🛠️ Detection Options")
-        confidence_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.1)
-        
-        st.markdown("### ℹ️ About")
-        st.info("""
-            Real-time car parts detection using machine learning.
-            Adjust confidence threshold to filter predictions.
-        """)
-
-    # Real-time detection section
-    st.markdown("### 📸 Real-Time Detection")
-    
-    # Create placeholders for top predictions
-    top_predictions_placeholder = st.empty()
-
-    # WebRTC streamer
+    confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.1)
     ctx = webrtc_streamer(
         key="car-parts-detector",
         video_processor_factory=lambda: CarPartsDetector(model, confidence_threshold),
-        media_stream_constraints={
-            "video": True,
-            "audio": False
-        }
+        media_stream_constraints={"video": {"facingMode": "user"}, "audio": False},
+        async_processing=True,
     )
-
-    # Display top predictions from session state
-    if hasattr(st.session_state, 'top_predictions'):
-        top_predictions_html = "<ul class='prediction-list'>"
-        for name, prob in st.session_state.top_predictions:
-            top_predictions_html += f'<li>{name}<span class="confidence">{prob:.1%}</span></li>'
-        top_predictions_html += '</ul>'
-        top_predictions_placeholder.markdown(top_predictions_html, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
