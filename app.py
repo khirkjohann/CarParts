@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import gdown
 import os
+import time
 
 # Page configuration
 st.set_page_config(
@@ -153,17 +154,23 @@ def main():
     camera_placeholder = st.empty()
     predictions_placeholder = st.empty()
 
-    # Frame processing counter
-    frame_count = 0
+    # Use session state to track frame count and ensure unique keys
+    if 'frame_count' not in st.session_state:
+        st.session_state.frame_count = 0
 
     while True:
+        # Generate a unique key using current timestamp
+        unique_key = f"camera_{int(time.time() * 1000)}"
+        
         # Capture frame from camera
-        camera_input = st.camera_input("", key=f"camera_{frame_count}", label_visibility="collapsed")
+        camera_input = st.camera_input("", key=unique_key, label_visibility="collapsed")
         
         if camera_input:
+            # Increment frame count
+            st.session_state.frame_count += 1
+            
             # Process every nth frame
-            frame_count += 1
-            if frame_count % frame_delay == 0:
+            if st.session_state.frame_count % frame_delay == 0:
                 image = Image.open(camera_input)
                 
                 with st.spinner("🔍 Analyzing..."):
