@@ -190,13 +190,17 @@ def main():
 
             # Display detailed probabilities
             st.markdown("### Class Probabilities")
-            for name, prob in non_zero_predictions:
-                st.progress(float(prob))
-                st.caption(f"{name}: {prob:.1%}")
+            predictions_with_names = list(zip(class_names, all_predictions))
+            for name, prob in sorted(predictions_with_names, key=lambda x: x[1], reverse=True):
+                if prob > 0:
+                    st.progress(float(prob))
+                    st.caption(f"{name}: {prob:.1%}")
 
             # Description
             st.markdown("### Description")
             st.markdown(class_info.get(class_name, "No description available."))
+
+            display_recommendations(class_name)
 
 if __name__ == "__main__":
     main()
