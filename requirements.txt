@@ -1,5 +1,5 @@
 streamlit==1.29.0
-tensorflow==2.15.0
+tensorflow==2.17.1
 opencv-python-headless==4.5.5.64
 numpy==1.23.5
 gdown==4.7.1
